@@ -395,7 +395,7 @@ local objects = {
 local blockSw = false
 local builderMode = true
 
-local menuOpened = true
+local menuOpened = false
 
 local ON_GRID = true
 local GRID_SIZE = 200
@@ -725,7 +725,7 @@ end
 hook_event(HOOK_ON_WARP, on_warp)
 hook_event(HOOK_MARIO_UPDATE, mario_update)
 hook_event(HOOK_ON_LEVEL_INIT, on_start)
-hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|help]\\#dcdcdc\\", handle_command)
+hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|select|help]\\#dcdcdc\\", handle_command)
 
 -- GUI
 local selectedButtonName = ""
@@ -759,7 +759,7 @@ local function select(down)
         cooldown = get_global_timer() + 4
     end
 
-    -- play_sound()
+    selectedButtonName = currentPageBtns[selectedButton]
 end
 
 local function on_hud_render()
@@ -793,6 +793,12 @@ local function on_hud_render()
         end
 
         local localPlayer = gMarioStates[0]
+
+        if (localPlayer.controller.buttonPressed & A_BUTTON) ~= 0 then
+            play_sound(1, localPlayer.header.gfx.cameraToObject)
+            change_block(selectedButtonName)
+            menuOpened = false
+        end
 
         if get_global_timer() > cooldown then
             if localPlayer.controller.stickY > 30 then
