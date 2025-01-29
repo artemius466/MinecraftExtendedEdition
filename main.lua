@@ -413,13 +413,13 @@ local curObjectModel = E_MODEL_CANNON_BASE
 ---@param oB number|integer
 ---@param thickness number|integer
 ---@param opacity number|integer|nil
-function djui_hud_render_rect_outlined(x, y, width, height, oR, oG, oB, thickness, opacity)
+function djui_hud_render_rect_outlined(x, y, width, height, thickness)
     if opacity == nil then opacity = 255 end
-    -- render main rect
+
+    djui_hud_set_color(0, 0, 0, 180)
     djui_hud_render_rect(x, y, width, height)
-    -- set outline color to, well, outline color
-    djui_hud_set_color(oR, oG, oB, opacity)
-    -- render rect outside of each side
+
+    djui_hud_set_color(0, 0, 0, 100)
     djui_hud_render_rect(x - thickness, y - thickness, thickness, height + thickness * 2)
     djui_hud_render_rect(x + (width - thickness) + thickness, y, thickness, height + thickness)
     djui_hud_render_rect(x, y - thickness, width + thickness, thickness)
@@ -656,30 +656,22 @@ function handle_command(msg)
     return true
 end
 
-local temp_selection_bl = "CANNON"
-local temp_selection_beh = "CANNON"
-
-local function on_clicked_other(index)
-    djui_chat_message_create("Yay")
-end
-
-hook_mod_menu_button("-=CUSTOM=-", on_clicked_other)
-hook_mod_menu_inputbox("Custom Block", "CANNON", 100, function (index, value) temp_selection_bl = value end)
-hook_mod_menu_inputbox("Custom Behavior", "CANNON", 100, function (index, value) temp_selection_beh = value end)
-hook_mod_menu_button("Select", function () change_block(temp_selection_bl, temp_selection_beh) end)
--- hook_mod_menu_button("-=BLOCKS=-", on_clicked_other)
-
--- for i, v in pairs(objects) do
---     hook_mod_menu_button(v.name, function() change_block(v.name, nil) end)
--- end
-
--- local function on_hud_render()
---     djui_hud_render_rect_outlined(200, 200, 500, 500, 100, 100, 100, 5, 200)
--- end
-
--- hook_event(HOOK_ON_HUD_RENDER, on_hud_render)
 
 hook_event(HOOK_ON_WARP, on_warp)
 hook_event(HOOK_MARIO_UPDATE, mario_update)
 hook_event(HOOK_ON_LEVEL_INIT, on_start)
-hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle]\\#dcdcdc\\", handle_command)
+hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|help]\\#dcdcdc\\", handle_command)
+
+-- GUI
+
+function on_hud_render()
+    local screenWidth = djui_hud_get_screen_width()
+    local screenHeight = djui_hud_get_screen_height()
+
+    local width = screenWidth/4
+    local height = screenHeight/1.2
+
+    djui_hud_render_rect_outlined((screenWidth/2)-(width/2), (screenHeight/2)-(height/2), width, height, 5)
+end
+
+hook_event(HOOK_ON_HUD_RENDER, on_hud_render)
