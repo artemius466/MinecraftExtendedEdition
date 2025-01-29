@@ -759,6 +759,7 @@ local function select(down)
         cooldown = get_global_timer() + 4
     end
 
+    play_sound(SOUND_MENU_CAMERA_TURN, gGlobalSoundSource)
     selectedButtonName = currentPageBtns[selectedButton]
 end
 
@@ -795,7 +796,7 @@ local function on_hud_render()
         local localPlayer = gMarioStates[0]
 
         if (localPlayer.controller.buttonPressed & A_BUTTON) ~= 0 then
-            play_sound(1, localPlayer.header.gfx.cameraToObject)
+            play_sound(SOUND_MENU_CHANGE_SELECT, gGlobalSoundSource)
             change_block(selectedButtonName)
             menuOpened = false
         end
