@@ -401,8 +401,30 @@ local GRID_SIZE = 200
 
 local startDialog = true
 
-local curObjectBeh = id_bhvJrbSlidingBox
-local curObjectModel = E_MODEL_BREAKABLE_BOX
+local curObjectBeh = id_bhvCannon
+local curObjectModel = E_MODEL_CANNON_BASE
+
+---@param x number|integer
+---@param y number|integer
+---@param width number|integer
+---@param height number|integer
+---@param oR number|integer
+---@param oG number|integer
+---@param oB number|integer
+---@param thickness number|integer
+---@param opacity number|integer|nil
+function djui_hud_render_rect_outlined(x, y, width, height, oR, oG, oB, thickness, opacity)
+    if opacity == nil then opacity = 255 end
+    -- render main rect
+    djui_hud_render_rect(x, y, width, height)
+    -- set outline color to, well, outline color
+    djui_hud_set_color(oR, oG, oB, opacity)
+    -- render rect outside of each side
+    djui_hud_render_rect(x - thickness, y - thickness, thickness, height + thickness * 2)
+    djui_hud_render_rect(x + (width - thickness) + thickness, y, thickness, height + thickness)
+    djui_hud_render_rect(x, y - thickness, width + thickness, thickness)
+    djui_hud_render_rect(x, y + (height - thickness) + thickness, width, thickness)
+end
 
 local function find_object_index_from_name(name)
     for i, v in pairs(objects) do
@@ -445,9 +467,9 @@ end
 
 local place
 
-function place_block(x,y,z) -- ARTEMIUS466'S CODE
-	if builderMode == true then
-		if blockSw == false then
+function place_block(x,y,z)
+	if builderMode then
+		if not blockSw then
 			local box = spawn_sync_object(
 				id_bhvBreakableBox,
 				E_MODEL_BREAKABLE_BOX,
@@ -490,7 +512,7 @@ function mario_update_local(m)
 	--update outline box pos
 	place = find_place()--prob not best to run this every update
 	if not place then
-			place = spawn_non_sync_object(
+			place = spawn_sync_object(
 				id_bhvOutlineblock,
 				E_MODEL_EXCLAMATION_BOX_OUTLINE,
 				posX,posY,posZ,
@@ -525,16 +547,22 @@ function mario_update_local(m)
 		end
     end
 
-    -- ARTEMIUS466'S CODE / Switch block
 	if (m.controller.buttonPressed & U_JPAD) ~= 0 then
 		blockSw = not blockSw
-		djui_chat_message_create("Switched block")
+        if not blockSw then
+		    djui_popup_create("Enabled default block!", 1)
+        else
+		    djui_popup_create("Enabled custom block!", 1)
+        end
     end
 
-    -- ARTEMIUS466'S CODE / Switch builder mode
     if (m.controller.buttonPressed & D_JPAD) ~= 0 then
 		builderMode = not builderMode
-		djui_chat_message_create("Switched builder mode")
+        if builderMode then
+		    djui_popup_create("Enabled builder mode!", 1)
+        else
+		    djui_popup_create("Disabled builder mode!", 1)
+        end
     end
 end
 
@@ -547,10 +575,7 @@ end
 function on_start()
 	if startDialog then
 		startDialog = false
-		djui_chat_message_create("Welcome to Minecraft [EXTENDED EDITION]!")
-		djui_chat_message_create("Place blocks with Y")
-		djui_chat_message_create("Switch block type with Dpad UP")
-		djui_chat_message_create("Switch builder mode with Dpad DOWN")
+		djui_popup_create("Welcome to Minecraft [EXTENDED EDITION]!\nPlace blocks with Y\nSwitch block type with Dpad UP\nSwitch builder mode with Dpad DOWN", 4)
 	end
 end
 
@@ -560,23 +585,101 @@ function mario_update(m)
     end
 end
 
+local function change_block(block, behavior)
+    if find_object_index_from_name(block) ~= nil then
+        if behavior == nil then
+            curObjectBeh = objects[find_object_index_from_name(block)].behavior
+        elseif behavior == "" then
+            curObjectBeh = objects[find_object_index_from_name(block)].behavior
+        else
+            curObjectBeh = objects[find_object_index_from_name(behavior)].behavior
+        end
+        curObjectModel = objects[find_object_index_from_name(block)].model
+
+        djui_popup_create("Ok! Now additional object is \\#ffff00\\"..block, 1)
+    else
+        djui_popup_create("Object isn't found!", 1)
+    end
+end
+
 function set_object_spawn(msg)
 	msg = string.upper(msg)
     local args = {}
     for argument in msg:gmatch("%S+") do table.insert(args, argument) end
 
-    if find_object_index_from_name(args[1]) ~= nil then
-        curObjectBeh = objects[find_object_index_from_name(args[1])].behavior
-        curObjectModel = objects[find_object_index_from_name(args[1])].model
-
-        djui_chat_message_create("Ok! Now additional object is \\#ffff00\\"..args[2]..".")
-    else
-        djui_chat_message_create("Object isnt found. Sorry")
-    end
+    change_block(args[1])
 end
 
+function split(inputstr, sep)
+    if sep == nil then
+      sep = "%s"
+    end
+    local t = {}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+      table.insert(t, str)
+    end
+    return t
+end
+
+function handle_command(msg)
+	local pu = string.upper(msg)
+    local args = split(pu, nil)
+
+    if args[1] == "SET" then
+        change_block(args[2], nil)
+    elseif args[1] == "SWITCH" then
+        blockSw = not blockSw
+        if not blockSw then
+		    djui_chat_message_create("Disabled custom block!")
+        else
+		    djui_chat_message_create("Enabled custom block!")
+        end
+    elseif args[1] == "TOGGLE" then
+        builderMode = not builderMode
+        if builderMode then
+		    djui_chat_message_create("Enabled builder mode!")
+        else
+		    djui_chat_message_create("Disabled builder mode!")
+        end
+    elseif args[1] == "HELP" then
+        local txt = "COMMAND | USAGE\nset            | Sets custom block\nswitch       | Toggles custom/default block\ntoggle        | Toggles mod\nhelp            | This command"
+        -- djui_chat_message_create("COMMAND | USAGE")
+        -- djui_chat_message_create("set     | Sets custom block")
+        -- djui_chat_message_create("switch  | Toggles custom/default block")
+        -- djui_chat_message_create("toggle  | Toggles mod")
+        -- djui_chat_message_create("help    | This command")
+        djui_chat_message_create(txt)
+    else
+        djui_chat_message_create("I don't recognize this. Type /mc help for more info.")
+    end
+
+    return true
+end
+
+local temp_selection_bl = "CANNON"
+local temp_selection_beh = "CANNON"
+
+local function on_clicked_other(index)
+    djui_chat_message_create("Yay")
+end
+
+hook_mod_menu_button("-=CUSTOM=-", on_clicked_other)
+hook_mod_menu_inputbox("Custom Block", "CANNON", 100, function (index, value) temp_selection_bl = value end)
+hook_mod_menu_inputbox("Custom Behavior", "CANNON", 100, function (index, value) temp_selection_beh = value end)
+hook_mod_menu_button("Select", function () change_block(temp_selection_bl, temp_selection_beh) end)
+-- hook_mod_menu_button("-=BLOCKS=-", on_clicked_other)
+
+-- for i, v in pairs(objects) do
+--     hook_mod_menu_button(v.name, function() change_block(v.name, nil) end)
+-- end
+
+-- local function on_hud_render()
+--     djui_hud_render_rect_outlined(200, 200, 500, 500, 100, 100, 100, 5, 200)
+-- end
+
+-- hook_event(HOOK_ON_HUD_RENDER, on_hud_render)
 
 hook_event(HOOK_ON_WARP, on_warp)
 hook_event(HOOK_MARIO_UPDATE, mario_update)
 hook_event(HOOK_ON_LEVEL_INIT, on_start)
-hook_chat_command("mc-set", "Set additional block", set_object_spawn)
+hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle]\\#dcdcdc\\", handle_command)
