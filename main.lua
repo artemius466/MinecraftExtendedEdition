@@ -396,6 +396,8 @@ local objects = {
 local blockSw = false
 local builderMode = true
 
+local menuOpened = true
+
 local ON_GRID = true
 local GRID_SIZE = 200
 
@@ -404,15 +406,11 @@ local startDialog = true
 local curObjectBeh = id_bhvCannon
 local curObjectModel = E_MODEL_CANNON_BASE
 
----@param x number|integer
----@param y number|integer
----@param width number|integer
----@param height number|integer
----@param oR number|integer
----@param oG number|integer
----@param oB number|integer
----@param thickness number|integer
----@param opacity number|integer|nil
+---@param x number|integer X Position of rect
+---@param y number|integer Y Position of rect
+---@param width number|integer Width of rect
+---@param height number|integer Height of rect
+---@param thickness number|integer Thickness of outline
 function djui_hud_render_rect_outlined(x, y, width, height, thickness)
     if opacity == nil then opacity = 255 end
 
@@ -420,6 +418,32 @@ function djui_hud_render_rect_outlined(x, y, width, height, thickness)
     djui_hud_render_rect(x, y, width, height)
 
     djui_hud_set_color(0, 0, 0, 100)
+    djui_hud_render_rect(x - thickness, y - thickness, thickness, height + thickness * 2)
+    djui_hud_render_rect(x + (width - thickness) + thickness, y, thickness, height + thickness)
+    djui_hud_render_rect(x, y - thickness, width + thickness, thickness)
+    djui_hud_render_rect(x, y + (height - thickness) + thickness, width, thickness)
+end
+
+---@param x number|integer X Position of button
+---@param y number|integer Y Position of button
+---@param width number|integer Width of button
+---@param height number|integer Height of button
+---@param thickness number|integer Thickness of outline
+---@param selected boolean If button is selected
+function djui_hud_button_render(x, y, width, height, thickness, selected)
+    if opacity == nil then opacity = 255 end
+
+    if selected == true then
+        djui_hud_set_color(60, 60, 60, 255)
+    else
+        djui_hud_set_color(10, 10, 10, 255)
+    end
+    djui_hud_render_rect(x, y, width, height)
+    if selected == true then
+        djui_hud_set_color(0, 101, 173, 255)
+    else
+        djui_hud_set_color(30, 30, 30, 255)
+    end
     djui_hud_render_rect(x - thickness, y - thickness, thickness, height + thickness * 2)
     djui_hud_render_rect(x + (width - thickness) + thickness, y, thickness, height + thickness)
     djui_hud_render_rect(x, y - thickness, width + thickness, thickness)
@@ -649,6 +673,8 @@ function handle_command(msg)
         -- djui_chat_message_create("toggle  | Toggles mod")
         -- djui_chat_message_create("help    | This command")
         djui_chat_message_create(txt)
+    elseif args[1] == "SELECT" then
+        menuOpened = not menuOpened
     else
         djui_chat_message_create("I don't recognize this. Type /mc help for more info.")
     end
@@ -664,14 +690,38 @@ hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|help]\\#dcdcdc\\",
 
 -- GUI
 
+local selectedButton = 1
+
 function on_hud_render()
-    local screenWidth = djui_hud_get_screen_width()
-    local screenHeight = djui_hud_get_screen_height()
+    if menuOpened == true then
+        local screenWidth = djui_hud_get_screen_width()
+        local screenHeight = djui_hud_get_screen_height()
 
-    local width = screenWidth/4
-    local height = screenHeight/1.2
+        djui_hud_set_color(0, 0, 0, 70)
+        djui_hud_render_rect(0, 0, screenWidth, screenHeight)
 
-    djui_hud_render_rect_outlined((screenWidth/2)-(width/2), (screenHeight/2)-(height/2), width, height, 5)
+        local width = screenWidth/4
+        local height = screenHeight/1.2
+
+        djui_hud_render_rect_outlined((screenWidth/2)-(width/2), (screenHeight/2)-(height/2), width, height, 5)
+
+        local buttonWidth = width/1.2
+        local buttonHeight = height/16
+
+        local i = 1
+        while i < 14 do
+            if selectedButton == i then
+                djui_hud_button_render((width/2)-(buttonWidth/2)+(screenWidth/2)-(width/2), ((buttonHeight+(buttonHeight/5))*i)+height/20, buttonWidth, buttonHeight, 2, true)
+            else
+                djui_hud_button_render((width/2)-(buttonWidth/2)+(screenWidth/2)-(width/2), ((buttonHeight+(buttonHeight/5))*i)+height/20, buttonWidth, buttonHeight, 2, false)
+            end
+            i = i + 1
+        end
+    end
 end
 
 hook_event(HOOK_ON_HUD_RENDER, on_hud_render)
+
+
+
+
