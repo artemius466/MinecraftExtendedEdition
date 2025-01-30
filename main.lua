@@ -494,7 +494,7 @@ local function get_last_page()
     for i, v in pairs(objects) do
         count = count + 1
     end
-    return count/13
+    return math.floor(count/13)
 end
 
 local function to_grid(n)
@@ -684,6 +684,8 @@ function split(inputstr, sep)
     return t
 end
 
+local previousBuilderMode = true
+
 function handle_command(msg)
 	local pu = string.upper(msg)
     local args = split(pu, nil)
@@ -705,7 +707,7 @@ function handle_command(msg)
 		    djui_chat_message_create("Disabled builder mode!")
         end
     elseif args[1] == "HELP" then
-        local txt = "COMMAND | USAGE\nset            | Sets custom block\nswitch       | Toggles custom/default block\ntoggle        | Toggles mod\nhelp            | This command"
+        local txt = "COMMAND | USAGE\nset            | Sets custom block\nswitch       | Toggles custom/default block\ntoggle        | Toggles mod\nselect        | Opens selection menu\nhelp            | This command"
         -- djui_chat_message_create("COMMAND | USAGE")
         -- djui_chat_message_create("set     | Sets custom block")
         -- djui_chat_message_create("switch  | Toggles custom/default block")
@@ -713,6 +715,8 @@ function handle_command(msg)
         -- djui_chat_message_create("help    | This command")
         djui_chat_message_create(txt)
     elseif args[1] == "SELECT" then
+        previousBuilderMode = builderMode
+        builderMode = false
         menuOpened = not menuOpened
     else
         djui_chat_message_create("I don't recognize this. Type /mc help for more info.")
@@ -725,7 +729,7 @@ end
 hook_event(HOOK_ON_WARP, on_warp)
 hook_event(HOOK_MARIO_UPDATE, mario_update)
 hook_event(HOOK_ON_LEVEL_INIT, on_start)
-hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|select|help]\\#dcdcdc\\", handle_command)
+hook_chat_command("mc", "\\#00ffff\\[set|switch|toggle|select|help]\\#dcdcdc\\", handle_command)
 
 -- GUI
 local selectedButtonName = ""
@@ -740,6 +744,8 @@ local currentPageBtns = {}
 local function update_page()
     currentPageBtns = get_object_list_by_page(page)
     buttons_on_page = count_array(currentPageBtns)-1
+
+    play_sound(SOUND_MENU_CAMERA_TURN, gGlobalSoundSource)
 end
 
 local function select(down)
@@ -759,12 +765,20 @@ local function select(down)
         cooldown = get_global_timer() + 4
     end
 
-    play_sound(SOUND_MENU_CAMERA_TURN, gGlobalSoundSource)
     selectedButtonName = currentPageBtns[selectedButton]
 end
 
+
 local function on_hud_render()
     if menuOpened == true then
+        builderMode = false
+        local localPlayer = gMarioStates[0]
+        localPlayer.vel.x = 0
+        localPlayer.vel.y = 0
+        localPlayer.vel.z = 0
+
+        set_mario_action(localPlayer, ACT_FLAG_IDLE, 0)
+
         if selectedButton > buttons_on_page then
             select(false)
         end
@@ -793,13 +807,21 @@ local function on_hud_render()
             i = i + 1
         end
 
-        local localPlayer = gMarioStates[0]
 
         if (localPlayer.controller.buttonPressed & A_BUTTON) ~= 0 then
             play_sound(SOUND_MENU_CHANGE_SELECT, gGlobalSoundSource)
             change_block(selectedButtonName)
+            builderMode = previousBuilderMode
             menuOpened = false
         end
+
+        if (localPlayer.controller.buttonPressed & B_BUTTON) ~= 0 then
+            play_sound(SOUND_MENU_EXIT_A_SIGN, gGlobalSoundSource)
+            builderMode = previousBuilderMode
+            menuOpened = false
+        end
+
+        print(page, max_page)
 
         if get_global_timer() > cooldown then
             if localPlayer.controller.stickY > 30 then
